@@ -2,91 +2,140 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sqlite3
 
-# ---------------------
-# 1️⃣ Create Flask app and enable CORS
-# ---------------------
+# ======================
+# CONFIG
+# ======================
+
+DB_PATH = "/Users/vindhayteotia/Downloads/aura-secure-dashboard/faias.db"
+
+# ======================
+# CREATE APP
+# ======================
+
 app = Flask(__name__)
 CORS(app)
 
-# ---------------------
-# 2️⃣ Database connection helper
-# ---------------------
+# ======================
+# DB HELPER
+# ======================
+
 def get_db_connection():
-    conn = sqlite3.connect("faias.db")
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-# ---------------------
-# 3️⃣ Test route
-# ---------------------
+# ======================
+# TEST ROUTE
+# ======================
+
 @app.route("/")
 def home():
-    return "FAIAS Backend is Running!"
+    return "FAIAS Backend is Running on port 5001!"
 
-# ---------------------
-# 4️⃣ API: Get Authorized Persons
-# ---------------------
-@app.route("/api/authorized", methods=["GET"])
-def get_authorized():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT person_id, name, unique_id, image_path, added_by, date_added
-        FROM authorized_persons
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows])
+# ======================
+# GET ALERTS
+# ======================
 
-# ---------------------
-# 5️⃣ API: Get Alerts (Dashboard)
-# ---------------------
 @app.route("/api/alerts", methods=["GET"])
 def get_alerts():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
-        SELECT alert_id, detected_at, confidence, notified
+        SELECT alert_id, detected_at, confidence, notified, type
         FROM alerts
         WHERE detected_at >= datetime('now', '-30 seconds')
         ORDER BY detected_at DESC
     """)
-
     rows = cursor.fetchall()
     conn.close()
-
     return jsonify([dict(row) for row in rows])
 
+# ======================
+# CREATE ALERT  (called by main.py log_scan)
+# ======================
 
-
-# ---------------------
-# 🚨 API: Create Alert (Live Feed)
-# ---------------------
 @app.route("/api/alert", methods=["POST"])
 def create_alert():
-    data = request.json
+    data = request.get_json()
+    confidence = data.get("confidence")
+    notified   = data.get("notified")
+    alert_type = data.get("type")
 
-    confidence = data.get("confidence", 0.0)
-    notified = data.get("notified", 0)
-
-    conn = get_db_connection()
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-
     cursor.execute("""
-        INSERT INTO alerts (confidence, notified)
-        VALUES (?, ?)
-    """, (confidence, notified))
-
+        INSERT INTO alerts (confidence, notified, type)
+        VALUES (?, ?, ?)
+    """, (confidence, notified, alert_type))
     conn.commit()
     conn.close()
 
     return jsonify({"status": "alert logged"})
 
+# ======================
+# ANALYTICS
+# ======================
 
-# ---------------------
-# 6️⃣ API: Insert Feedback
-# ---------------------
+@app.route("/api/analytics", methods=["GET"])
+def get_analytics():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) as total FROM alerts")
+    total_alerts = cursor.fetchone()["total"]
+
+    cursor.execute("SELECT COUNT(*) as total FROM authorized_persons")
+    total_authorized = cursor.fetchone()["total"]
+
+    cursor.execute("SELECT COUNT(*) as total FROM alerts WHERE confidence < 0.5")
+    false_positives = cursor.fetchone()["total"]
+
+    cursor.execute("SELECT type, COUNT(*) as count FROM alerts GROUP BY type")
+    rows = cursor.fetchall()
+    detection_ratio = {"intrusions": 0, "authorized": 0, "denied": 0}
+    for row in rows:
+        t = row["type"].lower()
+        if t == "intrusion":
+            detection_ratio["intrusions"] = row["count"]
+        elif t == "authorized":
+            detection_ratio["authorized"] = row["count"]
+        elif t == "denied":
+            detection_ratio["denied"] = row["count"]
+
+    cursor.execute("""
+        SELECT strftime('%w', detected_at) as day, type, COUNT(*) as count
+        FROM alerts
+        WHERE detected_at >= datetime('now', '-7 days')
+        GROUP BY day, type
+    """)
+    weekly_rows = cursor.fetchall()
+    weekly_data = {}
+    for row in weekly_rows:
+        day   = row["day"]
+        t     = row["type"].lower()
+        count = row["count"]
+        if day not in weekly_data:
+            weekly_data[day] = {"day": day, "intrusions": 0, "authorized": 0, "denied": 0}
+        if t == "intrusion":
+            weekly_data[day]["intrusions"] = count
+        elif t == "authorized":
+            weekly_data[day]["authorized"] = count
+        elif t == "denied":
+            weekly_data[day]["denied"] = count
+
+    conn.close()
+    return jsonify({
+        "total_alerts":    total_alerts,
+        "total_authorized": total_authorized,
+        "false_positives": false_positives,
+        "detection_ratio": detection_ratio,
+        "weekly_data":     list(weekly_data.values())
+    })
+
+# ======================
+# FEEDBACK  — POST (submit) + GET (admin view)
+# ======================
+
 @app.route("/api/feedback", methods=["POST"])
 def insert_feedback():
     data = request.json
@@ -95,56 +144,51 @@ def insert_feedback():
     cursor.execute("""
         INSERT INTO feedback (user_id, message)
         VALUES (?, ?)
-    """, (data["user_id"], data["message"]))
+    """, (data.get("user_id"), data.get("message")))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
 
-# ---------------------
-# 7️⃣ API: Get Users
-# ---------------------
-@app.route("/api/users", methods=["GET"])
-def get_users():
+@app.route("/api/feedback", methods=["GET"])
+def get_feedback():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT user_id, name, email, role, created_at
-        FROM users
+        SELECT f.feedback_id, f.user_id, f.message, f.submitted_at,
+               u.name, u.email
+        FROM feedback f
+        LEFT JOIN users u ON f.user_id = u.user_id
+        ORDER BY f.submitted_at DESC
     """)
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])
 
-# ---------------------
-# API: Insert User
-# ---------------------
-@app.route("/api/users", methods=["POST"])
-def add_user():
-    data = request.json
+# ======================
+# GET USERS (login table)
+# ======================
+
+@app.route("/api/users", methods=["GET"])
+def get_users():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO users (name, email)
-        VALUES (?, ?)
-    """, (data["name"], data["email"]))
-    conn.commit()
+    cursor.execute("SELECT user_id, name, email, role, created_at FROM users")
+    rows = cursor.fetchall()
     conn.close()
-    return jsonify({"status": "user added"})
+    return jsonify([dict(row) for row in rows])
 
-# ---------------------
-# 🔐 API: Login
-# ---------------------
+# ======================
+# LOGIN
+# ======================
+
 @app.route("/api/login", methods=["POST"])
 def login():
-    data = request.json
+    data  = request.json
     email = data.get("email")
 
-    conn = get_db_connection()
+    conn   = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT user_id, role FROM users WHERE email = ?",
-        (email,)
-    )
+    cursor.execute("SELECT user_id, name, role FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -152,22 +196,23 @@ def login():
         return jsonify({"error": "User not found"}), 401
 
     return jsonify({
-        "status": "login success",
-        "role": user["role"]
+        "status":  "login success",
+        "role":    user["role"],
+        "user_id": user["user_id"],
+        "name":    user["name"],
     })
 
-# ---------------------
-# 8️⃣ API: Face Authentication (placeholder)
-# ---------------------
+# ======================
+# FACE AUTH (placeholder)
+# ======================
+
 @app.route("/api/face-auth", methods=["POST"])
 def face_auth():
-    return jsonify({
-        "status": "success",
-        "message": "Face authentication complete"
-    })
+    return jsonify({"status": "success", "message": "Face authentication complete"})
 
-# ---------------------
-# 9️⃣ Run Flask server
-# ---------------------
+# ======================
+# RUN SERVER  — port 5001
+# ======================
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

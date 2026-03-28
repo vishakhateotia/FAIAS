@@ -1,21 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { PieChartIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const data = [
-  { name: "Authorized", value: 847, color: "oklch(0.75 0.14 160)" },
-  { name: "Denied", value: 123, color: "oklch(0.82 0.12 80)" },
-  { name: "Intrusions", value: 37, color: "oklch(0.72 0.14 20)" },
-]
+type RatioData = {
+  high: number
+  medium: number
+  low: number
+}
 
-export function DetectionRatioChart() {
+type Props = {
+  data: RatioData
+}
+
+export function DetectionRatioChart({ data }: Props) {
   const [isHovered, setIsHovered] = useState(false)
   const [hoveredItem, setHoveredItem] = useState<number | null>(null)
-  const total = data.reduce((acc, item) => acc + item.value, 0)
+
+  const formattedData = useMemo(() => {
+    return [
+      {
+        name: "Authorized",
+        value: data?.high || 0,
+        color: "oklch(0.75 0.14 160)",
+      },
+      {
+        name: "Denied",
+        value: data?.medium || 0,
+        color: "oklch(0.82 0.12 80)",
+      },
+      {
+        name: "Intrusions",
+        value: data?.low || 0,
+        color: "oklch(0.72 0.14 20)",
+      },
+    ]
+  }, [data])
+
+  const total = formattedData.reduce((acc, item) => acc + item.value, 0)
 
   return (
     <div
@@ -32,6 +57,7 @@ export function DetectionRatioChart() {
           <p className="text-sm text-muted-foreground">Access classification breakdown</p>
         </div>
       </div>
+
       <ChartContainer
         config={{
           authorized: { label: "Authorized", color: "oklch(0.75 0.14 160)" },
@@ -43,7 +69,7 @@ export function DetectionRatioChart() {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={formattedData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -52,7 +78,7 @@ export function DetectionRatioChart() {
               dataKey="value"
               strokeWidth={0}
             >
-              {data.map((entry, index) => (
+              {formattedData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
@@ -60,8 +86,9 @@ export function DetectionRatioChart() {
           </PieChart>
         </ResponsiveContainer>
       </ChartContainer>
+
       <div className="mt-4 space-y-3">
-        {data.map((item, index) => (
+        {formattedData.map((item, index) => (
           <div
             key={item.name}
             className={cn(
@@ -81,9 +108,12 @@ export function DetectionRatioChart() {
               />
               <span className="text-muted-foreground">{item.name}</span>
             </div>
+
             <div className="flex items-center gap-2">
               <span className="font-medium text-foreground">{item.value}</span>
-              <span className="text-muted-foreground">({((item.value / total) * 100).toFixed(1)}%)</span>
+              <span className="text-muted-foreground">
+                {total > 0 ? `(${((item.value / total) * 100).toFixed(1)}%)` : "(0%)"}
+              </span>
             </div>
           </div>
         ))}
