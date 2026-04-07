@@ -30,7 +30,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 app = FastAPI()
 
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-DASHBOARD_DIR = "/Users/vindhayteotia/Downloads/aura-secure-dashboard"
+DASHBOARD_DIR = BASE_DIR
 FACES_DIR     = os.path.join(DASHBOARD_DIR, "faces")
 INTRUDER_DIR  = os.path.join(BASE_DIR, "intruders")
 
