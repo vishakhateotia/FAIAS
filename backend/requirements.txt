@@ -8,3 +8,4 @@ flask-cors
 flask-jwt-extended
 sqlalchemy
 requests
+pillow
