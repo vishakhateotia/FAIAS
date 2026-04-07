@@ -56,7 +56,7 @@ def get_alerts():
 
 @app.route("/api/alert", methods=["POST"])
 def create_alert():
-    data = request.get_json()
+    data       = request.get_json()
     confidence = data.get("confidence")
     notified   = data.get("notified")
     alert_type = data.get("type")
@@ -125,37 +125,64 @@ def get_analytics():
 
     conn.close()
     return jsonify({
-        "total_alerts":    total_alerts,
+        "total_alerts":     total_alerts,
         "total_authorized": total_authorized,
-        "false_positives": false_positives,
-        "detection_ratio": detection_ratio,
-        "weekly_data":     list(weekly_data.values())
+        "false_positives":  false_positives,
+        "detection_ratio":  detection_ratio,
+        "weekly_data":      list(weekly_data.values())
     })
 
 # ======================
-# FEEDBACK  — POST (submit) + GET (admin view)
+# FEEDBACK — POST (submit) + GET (admin view)
 # ======================
 
 @app.route("/api/feedback", methods=["POST"])
 def insert_feedback():
-    data = request.json
-    conn = get_db_connection()
+    data    = request.json
+    user_id = data.get("user_id")
+    message = data.get("message")
+    # ✅ FIX: read the actual logged-in user's email and name sent from frontend
+    email   = data.get("email", "")
+    name    = data.get("name",  "")
+
+    conn   = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO feedback (user_id, message)
-        VALUES (?, ?)
-    """, (data.get("user_id"), data.get("message")))
+
+    # Try inserting with email + name columns (requires migration below)
+    try:
+        cursor.execute("""
+            INSERT INTO feedback (user_id, message, email, name)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, message, email, name))
+    except Exception:
+        # Fallback if email/name columns don't exist yet in feedback table
+        cursor.execute("""
+            INSERT INTO feedback (user_id, message)
+            VALUES (?, ?)
+        """, (user_id, message))
+        # Update the users row so the JOIN in GET returns the correct email
+        if email:
+            try:
+                cursor.execute("""
+                    UPDATE users SET email = ?, name = ?
+                    WHERE user_id = ?
+                """, (email, name, user_id))
+            except Exception:
+                pass
+
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
 
+
 @app.route("/api/feedback", methods=["GET"])
 def get_feedback():
-    conn = get_db_connection()
+    conn   = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT f.feedback_id, f.user_id, f.message, f.submitted_at,
-               u.name, u.email
+               COALESCE(f.name,  u.name)  as name,
+               COALESCE(f.email, u.email) as email
         FROM feedback f
         LEFT JOIN users u ON f.user_id = u.user_id
         ORDER BY f.submitted_at DESC

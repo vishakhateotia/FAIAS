@@ -12,6 +12,7 @@ import {
   ChevronRight,
   BarChart3,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Logo } from "./logo"
@@ -50,7 +51,15 @@ const navItems = [
     icon: FileText,
     color: "bg-peach",
     activeColor: "text-warning",
-    adminOnly: true,
+    adminOnly: false,   // ✅ changed from true → both admin and user can see logs
+  },
+  {
+    href: "/dashboard/feedback",
+    label: "Feedback",
+    icon: MessageSquare,
+    color: "bg-sky",
+    activeColor: "text-primary",
+    adminOnly: false,
   },
   {
     href: "/dashboard/settings",
@@ -80,7 +89,10 @@ export function Sidebar() {
       <div className="h-1 bg-gradient-to-r from-lavender via-mint to-peach" />
 
       <div
-        className={cn("p-5 border-b border-border flex items-center", collapsed ? "justify-center" : "justify-between")}
+        className={cn(
+          "p-5 border-b border-border flex items-center",
+          collapsed ? "justify-center" : "justify-between",
+        )}
       >
         <Logo size="sm" showText={!collapsed} />
         <Button
@@ -102,14 +114,21 @@ export function Sidebar() {
             )}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>{isAdmin ? "Administrator" : user.role === "guest" ? "Guest User" : "Registered User"}</span>
+            <span>
+              {isAdmin
+                ? "Administrator"
+                : user.role === "guest"
+                ? "Guest User"
+                : "Registered User"}
+            </span>
           </div>
         </div>
       )}
 
       <nav className="flex-1 p-3 space-y-1">
         {filteredNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/")
           return (
             <Link
               key={item.href}
@@ -122,8 +141,18 @@ export function Sidebar() {
                 collapsed && "justify-center px-2",
               )}
             >
-              <div className={cn("p-2 rounded-lg transition-colors duration-150", isActive ? item.color : "bg-muted")}>
-                <item.icon className={cn("w-4 h-4", isActive ? "text-foreground" : "text-muted-foreground")} />
+              <div
+                className={cn(
+                  "p-2 rounded-lg transition-colors duration-150",
+                  isActive ? item.color : "bg-muted",
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "w-4 h-4",
+                    isActive ? "text-foreground" : "text-muted-foreground",
+                  )}
+                />
               </div>
 
               {!collapsed && <span className="text-sm">{item.label}</span>}

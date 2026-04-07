@@ -11,7 +11,6 @@ export interface Intruder {
   timestamp: string
   location: string
   cameraId: string
-  threatLevel: "low" | "medium" | "high"
   imageQuery: string
 }
 
@@ -40,7 +39,6 @@ export default function LogsPage() {
         timestamp: item.timestamp,
         location: "Main Entrance",
         cameraId: "CAM-01",
-        threatLevel: item.type === "UNAUTHORIZED" ? "high" : "low",
         imageQuery: item.image
       }))
 
@@ -84,65 +82,8 @@ export default function LogsPage() {
             Review and manage detected intrusions
           </p>
         </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl bg-transparent"
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            Date Range
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl bg-transparent"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="pastel-card rounded-2xl p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-
-            <Input
-              placeholder="Search by ID, location, or date..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-11 bg-muted/50 border-0 rounded-xl"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="rounded-xl bg-transparent"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
-
-            <select
-              value={threatFilter}
-              onChange={(e) => setThreatFilter(e.target.value)}
-              className="px-4 py-2 bg-muted/50 border-0 rounded-xl text-sm"
-            >
-              <option value="all">All Threat Levels</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
+      
       {/* Loading state */}
       {loading ? (
         <div className="text-center p-12 text-muted-foreground">

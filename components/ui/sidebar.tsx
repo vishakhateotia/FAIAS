@@ -152,6 +152,7 @@ function SidebarProvider({
 }
 
 function Sidebar({
+  role = "user",
   side = 'left',
   variant = 'sidebar',
   collapsible = 'offcanvas',

@@ -85,27 +85,6 @@ export default function UsersPage() {
             Manage system users
           </p>
         </div>
-
-        <div className="flex gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-            className="border px-2 py-1 rounded text-sm"
-          />
-
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="border px-2 py-1 rounded text-sm"
-          />
-
-          <Button size="sm" onClick={addUser}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
-        </div>
       </div>
 
       {loading ? (

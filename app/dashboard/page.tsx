@@ -9,26 +9,26 @@ export default function DashboardPage() {
   const [totalScans, setTotalScans] = useState<number>(0)
   const [authorized, setAuthorized] = useState<number>(0)
   const [intrusions, setIntrusions] = useState<number>(0)
-  const [uptime, setUptime] = useState<number>(100)
+  const [uptime,     setUptime]     = useState<number>(100)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Authorized users
-        const authRes = await fetch("http://localhost:5001/api/authorized")
-        const authorizedData = await authRes.json()
+        // ── Authorized persons count → FastAPI port 8000 ──────────────────────
+        const authRes  = await fetch("http://localhost:8000/api/authorized")
+        const authData = await authRes.json()
+        setAuthorized(Array.isArray(authData) ? authData.length : 0)
 
-        // Alerts (already time-filtered in backend)
-        const alertRes = await fetch("http://localhost:5001/api/alerts")
-        const alerts = await alertRes.json()
+        // ── Cumulative totals → Flask port 5001 analytics ─────────────────────
+        // Uses total_alerts (all scans ever) and detection_ratio.intrusions
+        const analyticsRes  = await fetch("http://localhost:5001/api/analytics")
+        const analyticsData = await analyticsRes.json()
 
-        // ✅ REAL-TIME NUMBERS
-        setAuthorized(authorizedData.length)
-        setTotalScans(alerts.length)
-        setIntrusions(alerts.filter((a: any) => a.notified === 0).length)
+        setTotalScans(analyticsData.total_alerts        ?? 0)
+        setIntrusions(analyticsData.detection_ratio?.intrusions ?? 0)
 
       } catch (err) {
-        console.error("Dashboard error:", err)
+        console.error("Dashboard stats error:", err)
       }
     }
 
@@ -49,9 +49,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Scans" value={totalScans} icon="scan" />
-        <StatCard title="Authorized" value={authorized} icon="user" />
-        <StatCard title="Intrusions" value={intrusions} icon="alert" />
+        <StatCard title="Total Scans" value={totalScans} icon="scan"     />
+        <StatCard title="Authorized"  value={authorized} icon="user"     />
+        <StatCard title="Intrusions"  value={intrusions} icon="alert"    />
         <StatCard title="System Uptime" value={`${uptime}%`} icon="activity" />
       </div>
 

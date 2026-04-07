@@ -63,13 +63,6 @@ export function PersonnelTable({ personnel = [] }: PersonnelTableProps) {
                 className="pl-11 h-11 bg-muted/50 border-0 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/50"
               />
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-xl h-11 w-11 hover:bg-sky/50 transition-all bg-transparent"
-            >
-              <Filter className="w-4 h-4" />
-            </Button>
           </div>
         </div>
       </div>
@@ -104,7 +97,6 @@ export function PersonnelTable({ personnel = [] }: PersonnelTableProps) {
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden sm:table-cell">
                     Last Access
                   </th>
-                  <th className="text-right p-4 text-sm font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,25 +167,6 @@ export function PersonnelTable({ personnel = [] }: PersonnelTableProps) {
                       </td>
                       <td className="p-4 hidden sm:table-cell">
                         <span className="text-sm text-muted-foreground">{person.lastAccess}</span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="rounded-xl hover:bg-lavender/50 transition-all duration-300"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl">
-                            <DropdownMenuItem className="rounded-lg">View Profile</DropdownMenuItem>
-                            <DropdownMenuItem className="rounded-lg">Edit Access</DropdownMenuItem>
-                            <DropdownMenuItem className="rounded-lg">View Logs</DropdownMenuItem>
-                            <DropdownMenuItem className="text-danger rounded-lg">Revoke Access</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </td>
                     </tr>
                   )

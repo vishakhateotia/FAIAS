@@ -1,22 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MessageSquare, Send, Star, CheckCircle, RefreshCw, Trash2 } from "lucide-react"
+import { MessageSquare, Send, Star, CheckCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/lib/user-context"
 
-// Feedback goes to app.py (Flask) on port 5001
 const FLASK_API = "http://localhost:5001"
 
 interface FeedbackEntry {
-  feedback_id:   number
-  user_id:       number
-  message:       string
-  submitted_at:  string
-  name:          string | null
-  email:         string | null
+  feedback_id:  number
+  user_id:      number
+  message:      string
+  submitted_at: string
+  name:         string | null
+  email:        string | null
 }
 
 const CATEGORIES = [
@@ -33,7 +32,7 @@ const CATEGORIES = [
 const RATING_LABELS = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"]
 
 export default function FeedbackPage() {
-  const { isAdmin, userId } = useUser() as any
+  const { user, isAdmin } = useUser()
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [category,    setCategory]    = useState(CATEGORIES[0])
@@ -45,10 +44,10 @@ export default function FeedbackPage() {
   const [formError,   setFormError]   = useState("")
 
   // ── Admin list state ────────────────────────────────────────────────────────
-  const [feedbacks,    setFeedbacks]    = useState<FeedbackEntry[]>([])
-  const [fbLoading,    setFbLoading]    = useState(false)
-  const [searchQuery,  setSearchQuery]  = useState("")
-  const [filterCat,    setFilterCat]    = useState("All")
+  const [feedbacks,   setFeedbacks]   = useState<FeedbackEntry[]>([])
+  const [fbLoading,   setFbLoading]   = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterCat,   setFilterCat]   = useState("All")
 
   // ── Fetch all feedback (admin only) ────────────────────────────────────────
   const fetchFeedbacks = async () => {
@@ -68,22 +67,25 @@ export default function FeedbackPage() {
     if (isAdmin) fetchFeedbacks()
   }, [isAdmin])
 
-  // ── Submit feedback (user) ──────────────────────────────────────────────────
+  // ── Submit feedback ─────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setFormError("")
-    if (!message.trim())   { setFormError("Please write your feedback before submitting."); return }
+    if (!message.trim())     { setFormError("Please write your feedback before submitting."); return }
     if (message.length < 10) { setFormError("Feedback must be at least 10 characters."); return }
 
     setSubmitting(true)
     try {
       const fullMessage = `[${category}]${rating > 0 ? ` | Rating: ${rating}/5` : ""} — ${message.trim()}`
 
-      const res  = await fetch(`${FLASK_API}/api/feedback`, {
-        method: "POST",
+      const res = await fetch(`${FLASK_API}/api/feedback`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: userId ?? 1,
+          user_id: 1,
           message: fullMessage,
+          // ✅ FIX: send the actual logged-in user's email and name
+          email:   user?.email ?? "",
+          name:    user?.name  ?? "",
         }),
       })
 
@@ -115,7 +117,6 @@ export default function FeedbackPage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6 max-w-2xl">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-primary" />
@@ -126,8 +127,16 @@ export default function FeedbackPage() {
           </p>
         </div>
 
+        {/* Show who is submitting */}
+        {user && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 px-4 py-2 rounded-lg border">
+            <span>Submitting as:</span>
+            <span className="font-medium text-foreground">{user.name}</span>
+            <span className="text-muted-foreground">({user.email})</span>
+          </div>
+        )}
+
         {submitted ? (
-          /* Success state */
           <div className="border rounded-xl p-8 flex flex-col items-center gap-4 text-center bg-green-50/40">
             <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-8 h-8 text-green-600" />
@@ -143,12 +152,11 @@ export default function FeedbackPage() {
             </Button>
           </div>
         ) : (
-          /* Form */
           <div className="border rounded-xl overflow-hidden">
             <div className="px-5 py-4 bg-muted/40 border-b">
               <h3 className="font-semibold">Submit Feedback</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                All fields except rating are required. Your submission will be logged for administrative review.
+                All fields except rating are required.
               </p>
             </div>
 
@@ -180,14 +188,12 @@ export default function FeedbackPage() {
                       onClick={() => setRating(star === rating ? 0 : star)}
                       className="transition-transform hover:scale-110"
                     >
-                      <Star
-                        className={cn(
-                          "w-7 h-7 transition-colors",
-                          star <= (hoverRating || rating)
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-muted-foreground/30"
-                        )}
-                      />
+                      <Star className={cn(
+                        "w-7 h-7 transition-colors",
+                        star <= (hoverRating || rating)
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-muted-foreground/30"
+                      )} />
                     </button>
                   ))}
                   {(hoverRating || rating) > 0 && (
@@ -208,17 +214,18 @@ export default function FeedbackPage() {
                   rows={5}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
-                <div className="flex justify-between mt-1">
-                  <span className={cn("text-xs", message.length < 10 && message.length > 0 ? "text-red-500" : "text-muted-foreground")}>
-                    {message.length < 10 && message.length > 0 ? `${10 - message.length} more characters needed` : `${message.length} characters`}
-                  </span>
-                </div>
+                <span className={cn(
+                  "text-xs mt-1 block",
+                  message.length < 10 && message.length > 0 ? "text-red-500" : "text-muted-foreground"
+                )}>
+                  {message.length < 10 && message.length > 0
+                    ? `${10 - message.length} more characters needed`
+                    : `${message.length} characters`}
+                </span>
               </div>
 
-              {/* Info banner */}
               <div className="bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 text-sm text-muted-foreground">
                 📋 Your feedback will be stored in the system database and reviewed by the administrator.
-                A confirmation will be shown upon successful submission.
               </div>
 
               {formError && <p className="text-red-500 text-sm">{formError}</p>}
@@ -237,7 +244,6 @@ export default function FeedbackPage() {
   // ── ADMIN VIEW ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -260,14 +266,13 @@ export default function FeedbackPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total Feedback", value: feedbacks.length },
-          { label: "This Week",      value: feedbacks.filter((f) => {
+          { label: "Total Feedback",    value: feedbacks.length },
+          { label: "This Week",         value: feedbacks.filter((f) => {
             const d = new Date(f.submitted_at)
-            const now = new Date()
-            return (now.getTime() - d.getTime()) < 7 * 24 * 60 * 60 * 1000
+            return (Date.now() - d.getTime()) < 7 * 24 * 60 * 60 * 1000
           }).length },
-          { label: "Bug Reports",    value: feedbacks.filter((f) => f.message.toLowerCase().includes("bug")).length },
-          { label: "Feature Requests", value: feedbacks.filter((f) => f.message.toLowerCase().includes("feature")).length },
+          { label: "Bug Reports",       value: feedbacks.filter((f) => f.message.toLowerCase().includes("bug")).length },
+          { label: "Feature Requests",  value: feedbacks.filter((f) => f.message.toLowerCase().includes("feature")).length },
         ].map((stat) => (
           <div key={stat.label} className="border rounded-xl p-4 bg-background">
             <p className="text-2xl font-bold">{stat.value}</p>
@@ -309,10 +314,9 @@ export default function FeedbackPage() {
             </div>
           ) : (
             filteredFeedbacks.map((fb) => {
-              // Parse category and rating from message
               const catMatch    = fb.message.match(/^\[([^\]]+)\]/)
               const ratingMatch = fb.message.match(/Rating: (\d)\/5/)
-              const cat         = catMatch    ? catMatch[1]    : "General"
+              const cat         = catMatch    ? catMatch[1]          : "General"
               const fbRating    = ratingMatch ? parseInt(ratingMatch[1]) : null
               const cleanMsg    = fb.message.replace(/^\[[^\]]+\](\s*\|\s*Rating:\s*\d\/5\s*)?—\s*/, "")
 
@@ -324,6 +328,7 @@ export default function FeedbackPage() {
                         {(fb.name || "U").charAt(0).toUpperCase()}
                       </div>
                       <div>
+                        {/* ✅ FIX: show actual name and email from DB */}
                         <p className="text-sm font-medium">{fb.name || `User #${fb.user_id}`}</p>
                         <p className="text-xs text-muted-foreground">{fb.email || "—"}</p>
                       </div>
@@ -333,16 +338,19 @@ export default function FeedbackPage() {
                       {fbRating && (
                         <span className="flex items-center gap-0.5">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={cn("w-3 h-3", i < fbRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/20")} />
+                            <Star key={i} className={cn(
+                              "w-3 h-3",
+                              i < fbRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/20"
+                            )} />
                           ))}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {fb.submitted_at ? new Date(fb.submitted_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
-                      </span>
-                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {fb.submitted_at
+                        ? new Date(fb.submitted_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+                        : "—"}
+                    </span>
                   </div>
                   <p className="text-sm text-foreground/80 mt-2 ml-10 leading-relaxed">{cleanMsg}</p>
                 </div>

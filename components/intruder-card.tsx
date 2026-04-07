@@ -1,178 +1,141 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, Calendar, MapPin, Camera, MoreVertical, Eye } from "lucide-react"
+import { MapPin, Camera, Clock, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import type { Intruder } from "@/app/dashboard/logs/page"
 
-interface IntruderCardProps {
-  id: string
-  timestamp: string
-  location: string
-  cameraId: string
-  threatLevel: "low" | "medium" | "high"
-  imageQuery: string   // this is now the IMAGE URL
-}
+interface Props extends Intruder {}
 
 export function IntruderCard({
   id,
   timestamp,
   location,
   cameraId,
-  threatLevel,
   imageQuery,
-}: IntruderCardProps) {
-  const [isHovered, setIsHovered] = useState(false)
-
-  const threatColors = {
-    low: "bg-peach text-warning",
-    medium: "bg-peach text-warning",
-    high: "bg-blush text-danger",
-  }
-
-  const threatBorderColors = {
-    low: "border-peach",
-    medium: "border-peach",
-    high: "border-blush",
-  }
+}: Props) {
+  const [showDetail, setShowDetail] = useState(false)
 
   return (
-    <div
-      className={cn(
-        "pastel-card rounded-2xl overflow-hidden group cursor-pointer",
-        isHovered && "shadow-xl"
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* IMAGE SECTION */}
-      <div className="relative aspect-[4/3] overflow-hidden">
-
-        <img
-          src={imageQuery}
-          alt="Intruder snapshot"
-          className={cn(
-            "w-full h-full object-cover transition-transform duration-500",
-            isHovered && "scale-110"
+    <>
+      <div
+        className={cn(
+          "pastel-card rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer",
+          "hover:shadow-lg hover:-translate-y-0.5 border-border"
+        )}
+      >
+        {/* Image */}
+        <div className="relative h-48 bg-muted overflow-hidden">
+          {imageQuery ? (
+            <img
+              src={imageQuery}
+              alt={`Intruder #${id}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none"
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted/60">
+              <Camera className="w-12 h-12 text-muted-foreground/40" />
+            </div>
           )}
-        />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-card/95 via-card/30 to-transparent" />
-
-        {/* Threat Badge */}
-        <div
-          className={cn(
-            "absolute top-3 left-3 px-3 py-1.5 rounded-xl text-xs font-medium transition-transform duration-300",
-            threatColors[threatLevel],
-            isHovered && "scale-110"
-          )}
-        >
-          <div className="flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {threatLevel.toUpperCase()}
+          {/* ID badge only */}
+          <div className="absolute top-3 right-3">
+            <span className="px-2 py-1 rounded-lg text-xs font-mono bg-black/50 text-white">
+              #{id}
+            </span>
           </div>
         </div>
 
-        {/* Actions Menu */}
-        <div
-          className={cn(
-            "absolute top-3 right-3 transition-all duration-300",
-            isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-          )}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="bg-card/90 hover:bg-card rounded-xl backdrop-blur-sm"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
+        {/* Info */}
+        <div className="p-4 space-y-2">
+          <p className="font-semibold text-foreground">Unknown Subject</p>
 
-            <DropdownMenuContent align="end" className="rounded-xl">
-              <DropdownMenuItem className="rounded-lg">View Details</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">Export Image</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">Add to Watchlist</DropdownMenuItem>
-              <DropdownMenuItem className="text-danger rounded-lg">
-                Report False Positive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          <div className="space-y-1.5 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span>{timestamp}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 shrink-0 text-green-500" />
+              <span>{location}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Camera className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+              <span>{cameraId}</span>
+            </div>
+          </div>
 
-        {/* Detection Box Overlay */}
-        <div
-          className={cn(
-            "absolute bottom-16 left-1/2 -translate-x-1/2 w-24 h-32 border-2 rounded-lg animate-pulse-soft transition-all duration-300",
-            threatBorderColors[threatLevel],
-            isHovered && "scale-105"
-          )}
-        >
-          <div className={cn("absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2", threatBorderColors[threatLevel])} />
-          <div className={cn("absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2", threatBorderColors[threatLevel])} />
-          <div className={cn("absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2", threatBorderColors[threatLevel])} />
-          <div className={cn("absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2", threatBorderColors[threatLevel])} />
-        </div>
-
-      </div>
-
-      {/* INFO SECTION */}
-      <div className="p-5 space-y-4">
-
-        <div className="flex items-center justify-between">
-          <h4
-            className={cn(
-              "font-semibold text-foreground transition-colors",
-              isHovered && "text-primary"
-            )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full mt-3 rounded-xl border-pink-200 text-pink-600 hover:bg-pink-50"
+            onClick={() => setShowDetail(true)}
           >
-            Unknown Subject
-          </h4>
-
-          <span className="text-xs font-mono text-muted-foreground px-2 py-1 bg-muted/50 rounded-lg">
-            #{id}
-          </span>
+            <Eye className="w-4 h-4 mr-2" />
+            Review Incident
+          </Button>
         </div>
-
-        <div className="space-y-2 text-sm">
-
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <div className="p-1.5 rounded-lg bg-lavender/50">
-              <Calendar className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <span>{timestamp}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <div className="p-1.5 rounded-lg bg-mint/50">
-              <MapPin className="w-3.5 h-3.5 text-success" />
-            </div>
-            <span>{location}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <div className="p-1.5 rounded-lg bg-sky/50">
-              <Camera className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <span>{cameraId}</span>
-          </div>
-
-        </div>
-
-        <Button
-          className={cn(
-            "w-full rounded-xl bg-blush text-danger hover:bg-blush/80 transition-all duration-300",
-            isHovered && "shadow-lg -translate-y-0.5"
-          )}
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Review Incident
-        </Button>
-
       </div>
-    </div>
+
+      {/* Detail modal */}
+      {showDetail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setShowDetail(false)}
+        >
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal image */}
+            <div className="relative h-64 bg-muted">
+              {imageQuery ? (
+                <img
+                  src={imageQuery}
+                  alt={`Intruder #${id}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Camera className="w-16 h-16 text-muted-foreground/40" />
+                </div>
+              )}
+            </div>
+
+            {/* Modal info */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Incident #{id}</h3>
+                <span className="text-xs text-muted-foreground font-mono">{cameraId}</span>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                {[
+                  { icon: Clock,  label: "Time",     value: timestamp, color: "text-foreground" },
+                  { icon: MapPin, label: "Location",  value: location,  color: "text-green-600" },
+                  { icon: Camera, label: "Camera",    value: cameraId,  color: "text-blue-500"  },
+                ].map(({ icon: Icon, label, value, color }) => (
+                  <div key={label} className="flex justify-between py-1.5 border-b last:border-0">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Icon className={cn("w-4 h-4", color)} />
+                      {label}
+                    </div>
+                    <span className="font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button className="w-full rounded-xl" onClick={() => setShowDetail(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

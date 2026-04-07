@@ -17,7 +17,6 @@ const FLASK_API = "http://localhost:5001"
 const adminSections = [
   { id: "general",       label: "General",         icon: Shield,   adminOnly: false },
   { id: "notifications", label: "Notifications",   icon: Bell,     adminOnly: false },
-  { id: "cameras",       label: "Cameras",         icon: Camera,   adminOnly: true  },
   { id: "storage",       label: "Storage",         icon: Database, adminOnly: true  },
   { id: "users",         label: "User Management", icon: Users,    adminOnly: true  },
   { id: "security",      label: "Security",        icon: Lock,     adminOnly: true  },
@@ -273,7 +272,6 @@ function GeneralSection({ isAdmin }: { isAdmin: boolean }) {
         <div className="space-y-2 text-sm">
           {[
             ["System",   "AURA Secure — Face AI Access System"],
-            ["Version",  "1.0.0"],
             ["Frontend", "Next.js 14 + Tailwind CSS"],
             ["main.py",  "FastAPI — port 8000 (face engine)"],
             ["app.py",   "Flask — port 5001 (analytics / alerts)"],
@@ -313,8 +311,8 @@ function NotificationsSection({ isAdmin }: { isAdmin: boolean }) {
       {isAdmin && (
         <SectionCard title="Email Configuration">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldRow label="Sender Email"><Input defaultValue="vishakhateotia70@gmail.com" type="email" /></FieldRow>
-            <FieldRow label="Alert Receiver"><Input defaultValue="aurasecure01@gmail.com" type="email" /></FieldRow>
+            <FieldRow label="Sender Email"><Input defaultValue="aurasecure01@gmail.com" type="email" /></FieldRow>
+            <FieldRow label="Alert Receiver"><Input defaultValue="User's Mail" type="email" /></FieldRow>
           </div>
           <FieldRow label="Alert Cooldown (seconds)">
             <Input value={cooldown} onChange={(e) => setCooldown(e.target.value)} type="number" className="w-40" />
@@ -324,88 +322,6 @@ function NotificationsSection({ isAdmin }: { isAdmin: boolean }) {
           <SaveBtn onClick={save} />
         </SectionCard>
       )}
-    </div>
-  )
-}
-
-// ─── Section: Cameras ─────────────────────────────────────────────────────────
-function CamerasSection() {
-  const [camName,     setCamName]     = useState("Front Door")
-  const [camLoc,      setCamLoc]      = useState("Main Entrance - Building A")
-  const [camPort,     setCamPort]     = useState("0")
-  const [resolution,  setResolution]  = useState("720p")
-  const [fps,         setFps]         = useState("24")
-  const [motionZones, setMotionZones] = useState(true)
-  const [nightMode,   setNightMode]   = useState(false)
-  const [saved, setSaved] = useState(false)
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2500) }
-
-  const cameras = [
-    { id: "CAM-01", name: "Front Door",     location: "Main Entrance", status: "offline" },
-    { id: "CAM-02", name: "Server Room",    location: "IT Block",      status: "offline" },
-    { id: "CAM-03", name: "Parking Garage", location: "Ground Floor",  status: "offline" },
-    { id: "CAM-04", name: "Office Lobby",   location: "Reception",     status: "offline" },
-  ]
-
-  return (
-    <div className="space-y-6">
-      <SectionCard title="Connected Cameras">
-        <div className="space-y-2">
-          {cameras.map((cam) => (
-            <div key={cam.id} className="flex items-center justify-between px-3 py-2 border rounded-lg bg-background">
-              <div className="flex items-center gap-3">
-                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", cam.status === "online" ? "bg-green-500" : "bg-red-400")} />
-                <div>
-                  <p className="text-sm font-medium">{cam.name}</p>
-                  <p className="text-xs text-muted-foreground">{cam.id} · {cam.location}</p>
-                </div>
-              </div>
-              <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full",
-                cam.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
-                {cam.status === "online" ? "Online" : "Offline"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-      <SectionCard title="Primary Camera Settings (CAM-01)">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FieldRow label="Camera Label"><Input value={camName} onChange={(e) => setCamName(e.target.value)} /></FieldRow>
-          <FieldRow label="Location"><Input value={camLoc} onChange={(e) => setCamLoc(e.target.value)} /></FieldRow>
-          <FieldRow label="Device Index">
-            <Input value={camPort} onChange={(e) => setCamPort(e.target.value)} type="number" />
-            <p className="text-xs text-muted-foreground mt-1">0 = default webcam</p>
-          </FieldRow>
-          <FieldRow label="Resolution">
-            <select value={resolution} onChange={(e) => setResolution(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="480p">480p</option>
-              <option value="720p">720p (HD)</option>
-              <option value="1080p">1080p</option>
-            </select>
-          </FieldRow>
-          <FieldRow label="FPS"><Input value={fps} onChange={(e) => setFps(e.target.value)} type="number" /></FieldRow>
-        </div>
-        <Toggle checked={motionZones} onChange={setMotionZones} label="Enable motion detection zones" />
-        <Toggle checked={nightMode}   onChange={setNightMode}   label="Night mode (low-light enhancement)" />
-        {saved && <p className="text-green-600 text-sm">✅ Camera settings saved.</p>}
-        <SaveBtn onClick={save} />
-      </SectionCard>
-      <SectionCard title="Recognition Settings">
-        <FieldRow label="Face Match Tolerance">
-          <div className="flex items-center gap-3">
-            <input type="range" min="30" max="70" defaultValue="50" className="flex-1 accent-primary" />
-            <span className="text-sm font-medium w-12 text-right">0.50</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Lower = stricter. Default 0.50 recommended.</p>
-        </FieldRow>
-        <FieldRow label="Detection Model">
-          <select className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="hog">HOG (Fast, CPU)</option>
-            <option value="cnn">CNN (Accurate, GPU)</option>
-          </select>
-        </FieldRow>
-      </SectionCard>
     </div>
   )
 }
@@ -439,32 +355,6 @@ function StorageSection() {
           </div>
           <div className="w-full bg-muted rounded-full h-2"><div className="bg-primary h-2 rounded-full" style={{ width: "12%" }} /></div>
           <p className="text-xs text-muted-foreground mt-1">12% of estimated 500 MB</p>
-        </div>
-      </SectionCard>
-      <SectionCard title="Retention Policy">
-        <Toggle checked={autoDelete} onChange={setAutoDelete} label="Auto-delete old intruder snapshots" />
-        <FieldRow label="Keep snapshots for (days)">
-          <Input value={retentionDays} onChange={(e) => setRetentionDays(e.target.value)} type="number" className="w-36" disabled={!autoDelete} />
-        </FieldRow>
-        <Toggle checked={compressImages} onChange={setCompressImages} label="Compress saved face images (JPEG 80%)" />
-        {saved && <p className="text-green-600 text-sm">✅ Storage settings saved.</p>}
-        <SaveBtn onClick={save} />
-      </SectionCard>
-      <SectionCard title="Maintenance">
-        <div className="space-y-3">
-          {[
-            { label: "Rebuild Face Encodings", desc: "Re-generates encodings from all authorized face images.", icon: <RotateCcw className="w-4 h-4 mr-1" />, text: "Rebuild", variant: "outline" as const },
-            { label: "Export Database Backup",  desc: "Download a copy of faias.db.",                          icon: <HardDrive className="w-4 h-4 mr-1" />, text: "Export",  variant: "outline" as const },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between p-3 border rounded-lg">
-              <div><p className="text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
-              <Button variant={item.variant} size="sm">{item.icon}{item.text}</Button>
-            </div>
-          ))}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div><p className="text-sm font-medium">Clear Rejected Requests</p><p className="text-xs text-muted-foreground">Remove rejected request images from disk.</p></div>
-            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-4 h-4 mr-1" />Clear</Button>
-          </div>
         </div>
       </SectionCard>
     </div>
@@ -529,19 +419,6 @@ function SecuritySection() {
                 log.status === "Success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
                 {log.status}
               </span>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-      <SectionCard title="Danger Zone">
-        <div className="space-y-3">
-          {[
-            { label: "Reset All Face Encodings", desc: "Clears encodings — all faces must be re-enrolled." },
-            { label: "Purge All Alerts",          desc: "Permanently deletes all alert records."           },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between p-3 border border-red-200 rounded-lg bg-red-50/40">
-              <div><p className="text-sm font-medium text-red-700">{item.label}</p><p className="text-xs text-red-500">{item.desc}</p></div>
-              <Button variant="destructive" size="sm">Reset</Button>
             </div>
           ))}
         </div>
@@ -887,7 +764,6 @@ export default function SettingsPage() {
 
             {activeSection === "general"       && <GeneralSection       isAdmin={isAdmin} />}
             {activeSection === "notifications" && <NotificationsSection isAdmin={isAdmin} />}
-            {isAdmin && activeSection === "cameras"  && <CamerasSection />}
             {isAdmin && activeSection === "storage"  && <StorageSection />}
             {isAdmin && activeSection === "security" && <SecuritySection />}
             {isAdmin && activeSection === "users" && (
